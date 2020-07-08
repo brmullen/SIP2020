@@ -176,5 +176,4 @@ plt.hist(X.iloc[:,11], bins = 10, alpha = 0.5)'''
 33    temporal.autocorr        0.953695
 34          freq.avgsnr        0.953859
 35  region.eccentricity        0.954351
-
 '''
