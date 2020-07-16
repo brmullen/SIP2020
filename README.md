@@ -54,6 +54,7 @@ Current list that we will use to compare models (3 regoin, 3 spatial, 3 freq, 1 
     8. freq.maxsnr.freq
     9. freq.avgsnr
     10. temporal.max
+    11. age (not scaled?/scaled?)
 
 
 - [ ] Compare between domain vs no-domain (x2 per other comparison)
