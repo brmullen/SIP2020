@@ -136,13 +136,11 @@ col.remove("threshold.perc")
 data[data["signal"]==1] = missing_val_fill(data[data["signal"]==1], col, data[data["signal"]==1].median())
 data[data["signal"]==0] = missing_val_fill(data[data["signal"]==0], col, data[data["signal"]==0].median())
 
-print(Counter(np.isnan(data["threshold.area"])))
 
 data = (data.pipe(missing_val_fill, col = ["threshold.area", "threshold.perc"], filler = 0)
-            .pipe(cat_df, "age"))
+            .pipe(split, conditions = [data["threshold.area"]!=0, data["threshold.area"]==0]))
             #.pipe(missing_val_fill, col = col, filler = data.median())
 
-print(len(data[0][data[0]["threshold.area"]==0]))
 
 '''import sweetviz
 Domain = data[0][data[0]["threshold.area"]!=0]
@@ -153,8 +151,8 @@ for i in range(len(data)):
     data[i] = (data[i].pipe(FeatureScaler, num_cols = num_cols, ScalerType = "standard")
                       .pipe(Encoder, col = "artifact")
                       .pipe(Encoder, col = "signal"))
-    
 
+num_cols.append("age")
 
 ages = 5
 X = list(np.zeros(ages))
@@ -169,8 +167,6 @@ X_train = list(np.zeros(ages))
 X_test = list(np.zeros(ages))
 y_train = list(np.zeros(ages))
 y_test = list(np.zeros(ages))
-
-
 
 '''ann = tf.keras.models.Sequential()
 ann.add(tf.keras.layers.Dense(units = 37, activation = 'relu'))
