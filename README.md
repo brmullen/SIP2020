@@ -2,13 +2,14 @@
 
 ## TODO list
 
-[x] Find ways of displaying data categories (pairplots and histograms)
-[x] Run any machine learning classifier (use the code from the jupyter notebook and the pyWholeBrainClassify.py)
-[x] Investigate based on different age groups:
+- [x] Find ways of displaying data categories (pairplots and histograms)
+- [x] Run any machine learning classifier (use the code from the jupyter notebook and the pyWholeBrainClassify.py)
+- [x] Investigate based on different age groups:
 
 __BEST FEATURES BY AGE GROUP__
 
 Saathvik (Age group: P1-P5):
+
     1. region.minaxis
     2. freq.rangesz
     3. mass.region/mass.perc
@@ -19,6 +20,7 @@ Saathvik (Age group: P1-P5):
     8. freq.avgsnr
 
 Anna (Age group: P6-10):
+
     1. region.majaxis
     2. region.minaxis
     3. spatial.min
@@ -26,6 +28,7 @@ Anna (Age group: P6-10):
     5. temporal.min
 
 Giovanni (Age group 11-14):
+
     1. freq.integrate
     2. freq.rangesz
     3. mass.region/mass.perc
@@ -53,8 +56,8 @@ Current list that we will use to compare models (3 regoin, 3 spatial, 3 freq, 1 
     10. temporal.max
 
 
-[ ] Compare between domain vs no-domain (x2 per other comparison)
-[ ] Compare each age group to all the data together (total of 8 ML algorithms)
+- [ ] Compare between domain vs no-domain (x2 per other comparison)
+- [ ] Compare each age group to all the data together (total of 8 ML algorithms)
     Use randomForest for classification
 
 
