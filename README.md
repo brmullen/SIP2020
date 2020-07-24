@@ -62,4 +62,19 @@ Current list that we will use to compare models (3 regoin, 3 spatial, 3 freq, 1 
     Use randomForest for classification
 
 
+New list:
+
+['temporal.autocorr',
+'region.extent',
+'region.majaxis',
+'region.minaxis',
+'mass.region',
+'threshold.area',
+'freq.rangesz',
+'freq.maxsnr.freq',
+'freq.avgsnr',
+'temporal.max',
+'age']
+
+Note: I added 'temporal.autocorr' and 'region.extent' because they work well when I run the whole dataset through a random forest classifier with 18 branches and 5 max features per branch.
 

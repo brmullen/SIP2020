@@ -12,17 +12,20 @@ from collections import Counter
 import numpy as np
 from sklearn.preprocessing import LabelBinarizer
 from sklearn import preprocessing
-from sklearn.model_selection import StratifiedShuffleSplit, GridSearchCV
+from sklearn.model_selection import StratifiedShuffleSplit, GridSearchCV, train_test_split
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import seaborn as sb
 from sklearn.decomposition import PCA
 from statistics import stdev
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, precision_score
 from sklearn.svm import SVR, SVC
+import sys
+import scipy as sp
+import random
 
 def read_tsv(file, index_col):
     tsv_file = open(file)
@@ -100,11 +103,12 @@ def cat_df(data, feature):
     return data1
 
 def split(data, conditions):
-    df = [0]
+    '''df = [0]
     for i in range(len(conditions)):
         df[i] = data[conditions[i]]
         df.append(0)
-    df = df[:-1]
+    df = pd.DataFrame(df[:-1])'''
+    df = data[conditions]
     return df
 
 def test_train_split(X,y, n_splits, test_size):
@@ -117,19 +121,24 @@ def test_train_split(X,y, n_splits, test_size):
 num_cols = list(data.columns)
 num_cols.remove("artifact")
 num_cols.remove("signal")
-num_cols.remove("age")
 num_cols.remove("anml")
+num_cols.remove("age")
+
+strat_samp = pd.DataFrame(columns = data.columns)
+lnth = 0
+for i in range(14):
+    tmdf = pd.DataFrame(data[data["age"]==i+1])
+    tmdf.index = list(sp.arange(0, len(data[data["age"]==i+1])))
+    rand_index = random.sample(set(tmdf.index), 468)
+    strat_samp = strat_samp.append(tmdf.iloc[rand_index])
+    lnth = len(data[data["age"]==i+1])
+
+#data = strat_samp
 
 col = [0]
 q = 0
 
 col = list(data.columns)
-'''for e in data.columns:
-    if(len(np.unique(np.isnan(data[e])))==2):
-        col[q] = e
-        col.append(0)
-        q+=1
-col = col[:-1]'''
 col.remove("threshold.area")
 col.remove("threshold.perc")
 
@@ -138,23 +147,18 @@ data[data["signal"]==0] = missing_val_fill(data[data["signal"]==0], col, data[da
 
 
 data = (data.pipe(missing_val_fill, col = ["threshold.area", "threshold.perc"], filler = 0)
-            .pipe(split, conditions = [data["threshold.area"]!=0, data["threshold.area"]==0]))
-            #.pipe(missing_val_fill, col = col, filler = data.median())
+            .pipe(split, conditions = data["age"].between(1,14)))
+            #.pipe(split, conditions = data["threshold.area"]!=0)
 
-
-'''import sweetviz
-Domain = data[0][data[0]["threshold.area"]!=0]
-NoDomain = data[0][data[0]["threshold.area"]==0]
-report = sweetviz.compare([Domain, "Domain"], [NoDomain, "NoDomain"], "signal")'''
+data = [data]
 
 for i in range(len(data)):
     data[i] = (data[i].pipe(FeatureScaler, num_cols = num_cols, ScalerType = "standard")
                       .pipe(Encoder, col = "artifact")
                       .pipe(Encoder, col = "signal"))
-
 num_cols.append("age")
 
-ages = 5
+ages = 1
 X = list(np.zeros(ages))
 y = list(np.zeros(ages))
 for i in range(ages):
@@ -168,360 +172,490 @@ X_test = list(np.zeros(ages))
 y_train = list(np.zeros(ages))
 y_test = list(np.zeros(ages))
 
-'''ann = tf.keras.models.Sequential()
-ann.add(tf.keras.layers.Dense(units = 37, activation = 'relu'))
-ann.add(tf.keras.layers.Dense(units = 37, activation = 'relu'))
-ann.add(tf.keras.layers.Dense(units = 1, activation = 'sigmoid'))
-#output layer activation = 'soft max' for non-binary output variable
+# =============================================================================
+# ranking_dfs = list(np.zeros(ages))
+# fig = list(np.zeros(ages))
+# for u in range(len(fig)):
+#     fig[u] = list(np.zeros(len(X[0].columns)))
+# for j in range(ages):
+#     a = 0
+#     shape_diff = list(np.zeros(len(X[j].columns)))
+#     median_diff = list(np.zeros(len(X[j].columns)))
+#     modal_diff = list(np.zeros(len(X[j].columns)))
+#     skew_diff = list(np.zeros(len(X[j].columns)))
+#     cluster_diff = list(np.zeros(len(X[j].columns)))
+#     for i in X[j].columns:
+#         signal_indices = y[j][y[j]==1].index
+#         artifact_indices = y[j][y[j]==0].index
+#         a+=1
+#         sig = X[j][i][signal_indices]
+#         art = X[j][i][artifact_indices]
+#         median_diff[a-1] = abs(sig.median()-art.median())
+#         if(stdev(sig)!=0 and stdev(art)!=0):
+#             skew_diff[a-1] = abs(3*(sig.mean()-sig.median())/(stdev(sig)) - 3*(art.mean()-art.median())/(stdev(art)))
+#         else:
+#             skew_diff[a-1] = abs(3*(sig.mean()-sig.median()) - 3*(art.mean()-art.median()))
+#   
+#         plt.figure(100)
+#         n = plt.hist([sig,art], bins = 20)
+#         plt.close(fig=100)
+#         plt.figure(a)
+# #        plt.title(str(i) + "  " + str(median_diff[a-1]))
+# #        sb.distplot(sig, bins = 20, hist = False, rug = True, color = "green", kde_kws = {'bw':0.1})
+# #        sb.distplot(art, bins = 20, hist = False, rug = True, color = "red", kde_kws = {'bw':0.1})
+#         fig[j][a-1] , ax1 = plt.subplots()
+#         ax1.set_title("P"+str(j+1)+"  "+str(i))
+#         ax1.hist(sig, bins = 50, alpha = 0.5, label ='artifact', color = 'r')
+#         ax1.grid(False)         
+#         ax1.set_xlabel('Values')
+#         ax1.set_ylabel('# of instances', color = 'red')
+#         
+#         ax2 = ax1.twinx()
+#         ax2.hist(art, bins = 50, alpha = 0.5, label ='signal', color = 'g')
+#         ax2.set_ylabel('# of instances', color = 'green')
+#         ax2.grid(False)
+#         
+#         ax1.legend(loc='upper left')
+#         ax2.legend(loc='upper right')
+#         #plt.show()
+#         
+#         temp_df = pd.DataFrame(n[0][0], columns = ["signal"])
+#         temp_df["artifact"] = n[0][1]
+#         loc = n[1]
+#         temp_df = FeatureScaler(temp_df, ["signal", "artifact"], "minmax")
+#         shape_diff[a-1] = list(np.array(temp_df["signal"])-np.array(temp_df["artifact"]))
+#         modal_diff[a-1] = abs(loc[list(temp_df["signal"]).index(max(temp_df["signal"]))]-loc[list(temp_df["artifact"]).index(max(temp_df["artifact"]))])
+#         cluster_diff[a-1] = modal_diff[a-1]*(1/stdev(sig))*(1/stdev(art))
+#         
+#     
+#     def diff_gauge(data):
+#         stdev = list(np.zeros(len(data)))
+#         for i in range(len(data)):
+#             stdev[i] = np.sqrt(sum(np.array(data[i])**2)/(len(data[i])-1))
+#         return stdev
+#     
+#     diffg = diff_gauge(shape_diff)
+#     
+#     features = pd.DataFrame(X[j].columns, columns = ["feature"], index = np.arange(1,(len(X[j].columns)+1)))
+#     features["median_diff"] = median_diff
+#     features["shape_diff"] = diffg
+#     features["modal_diff"] = modal_diff
+#     features["skew_diff"] = skew_diff
+#     features["cluster_diff"] = cluster_diff
+#     features = FeatureScaler(features, ["median_diff", "shape_diff", "modal_diff", "skew_diff", "cluster_diff"], "minmax")
+#     #features["combined_gauge1"] = np.array(features["median_diff"])+np.array(features["shape_diff"])+np.array(features["modal_diff"])
+#     #features["combined_gauge2"] = (np.array(features["spread_diff"]))+np.array(features["median_diff"])
+#     
+#     ranking_dfs[j] = features
+#     
+# r = len(ranking_dfs[0])
+# rank = list(np.zeros(len(ranking_dfs)))
+# for h in range(len(ranking_dfs)):
+#     ranking_dfs[h]["Combo_Gauge"] = 3*np.array(ranking_dfs[h]["cluster_diff"]) + 1*np.array(ranking_dfs[h]["median_diff"]) + 0*np.array(ranking_dfs[h]["shape_diff"]) + 2.3*np.array(ranking_dfs[h]["modal_diff"]) + 0*np.array(ranking_dfs[h]["skew_diff"])
+#     ranking_dfs[h] = (ranking_dfs[h].sort_values(by = ["cluster_diff"], ascending = False ,ignore_index = True))
+#     rank[h] = ranking_dfs[h][:r]
+# 
+# print(rank)
+# 
+# def figure(data, feature):
+#     index = list(data.columns).index(feature)
+#     return index
+# 
+# a = [0]
+# b = 0
+# for i in range(len(rank)):
+#     for j in (rank[i]["feature"]):
+#         idx = figure(X[0], j) 
+#         a[b] = fig[i][idx]
+#         b+=1
+#         a.append(0)
+# a = a[:-1]
+# =============================================================================
 
-ann.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
-#categorical_crossentropy for non-binary output variable
-
-log = LogisticRegression(solver = "liblinear")
-
-y_pred = list(np.zeros(len(data)))
-for i in range(len(data)):
-    #log.fit(X_train[i], y_train[i])
-    ann.fit(X_train[i], y_train[i], batch_size = 32, epochs = 150)
-    y_pred[i] = ann.predict(X_test[i])
-    y_pred[i] = (y_pred[i] > 0.5)
-    y_test[i] = np.array(y_test[i])
-    #print(np.concatenate((y_pred.reshape(len(y_pred),1), y_test[0].reshape(len(y_test[0]),1)),1))    
-
-for i in range(len(data)):
-    cm = confusion_matrix(y_test[i], y_pred[i])
-    print(cm)
-    acc = accuracy_score(y_test[i], y_pred[i])
-    print("accuracy:",acc)
-    pre = precision_score(y_test[i], y_pred[i])
-    print("precision:",pre)
-    rec = recall_score(y_test[i], y_pred[i])
-    print("recall:",rec)'''
-
-'''activation = ["relu", "softmax", "leakyrelu", "prelu", "elu", "thresholdrelu"]
-optimizer = ["sgd", "rmsprop", "adam", "adadelta", "adagrad", "adamax", "nadam", "ftrl"]
-units = [5, 10, 15, 20, 25, 30, 35, 37]
-batch_size = [20, 30, 32, 40, 50]
-
-param_grid = dict(activation = activation,
-                 optimizer = optimizer,
-                 units = units,
-                 batch_size = batch_size)
-
-grid = GridSearchCV(estimator = ann,
-                    param_grid = param_grid,
-                    scoring = "roc_auc",
-                    verbose = 1,
-                    n_jobs = -1)
-
-grid_result = grid.fit(X_train[0], y_train[0])
-
-print("Best Score:", grid_result.best_score_)
-print("Best Parameters:", grid_result.best_params_)
-'''
-
-'''for w in range(len(X)):
-    X[w] = X[w][X[w]["threshold.area"]!=0]'''
-
-
-ranking_dfs = list(np.zeros(ages))
-fig = list(np.zeros(ages))
-for u in range(len(fig)):
-    fig[u] = list(np.zeros(len(X[0].columns)))
-for j in range(ages):
-    a = 0
-    shape_diff = list(np.zeros(len(X[j].columns)))
-    median_diff = list(np.zeros(len(X[j].columns)))
-    modal_diff = list(np.zeros(len(X[j].columns)))
-    skew_diff = list(np.zeros(len(X[j].columns)))
-    cluster_diff = list(np.zeros(len(X[j].columns)))
-    for i in X[j].columns:
-        signal_indices = y[j][y[j]==1].index
-        artifact_indices = y[j][y[j]==0].index
-        a+=1
-        sig = X[j][i][signal_indices]
-        art = X[j][i][artifact_indices]
-        median_diff[a-1] = abs(sig.median()-art.median())
-        if(stdev(sig)!=0 and stdev(art)!=0):
-            skew_diff[a-1] = abs(3*(sig.mean()-sig.median())/(stdev(sig)) - 3*(art.mean()-art.median())/(stdev(art)))
-        else:
-            skew_diff[a-1] = abs(3*(sig.mean()-sig.median()) - 3*(art.mean()-art.median()))
-  
-        plt.figure(100)
-        n = plt.hist([sig,art], bins = 20)
-        plt.close(fig=100)
-        '''plt.figure(a)
-        plt.title(str(i) + "  " + str(median_diff[a-1]))
-        sb.distplot(sig, bins = 20, hist = False, rug = True, color = "green", kde_kws = {'bw':0.1})
-        sb.distplot(art, bins = 20, hist = False, rug = True, color = "red", kde_kws = {'bw':0.1})'''
-        fig[j][a-1] , ax1 = plt.subplots()
-        ax1.set_title("P"+str(j+1)+"  "+str(i))
-        ax1.hist(sig, bins = 50, alpha = 0.5, label ='artifact', color = 'r')
-        ax1.grid(False)         
-        ax1.set_xlabel('Values')
-        ax1.set_ylabel('# of instances', color = 'red')
-        
-        ax2 = ax1.twinx()
-        ax2.hist(art, bins = 50, alpha = 0.5, label ='signal', color = 'g')
-        ax2.set_ylabel('# of instances', color = 'green')
-        ax2.grid(False)
-        
-        ax1.legend(loc='upper left')
-        ax2.legend(loc='upper right')
-        plt.show()
-        
-        temp_df = pd.DataFrame(n[0][0], columns = ["signal"])
-        temp_df["artifact"] = n[0][1]
-        loc = n[1]
-        temp_df = FeatureScaler(temp_df, ["signal", "artifact"], "minmax")
-        shape_diff[a-1] = list(np.array(temp_df["signal"])-np.array(temp_df["artifact"]))
-        modal_diff[a-1] = abs(loc[list(temp_df["signal"]).index(max(temp_df["signal"]))]-loc[list(temp_df["artifact"]).index(max(temp_df["artifact"]))])
-        cluster_diff[a-1] = modal_diff[a-1]*(1/stdev(sig))*(1/stdev(art))
-        
-    
-    def diff_gauge(data):
-        stdev = list(np.zeros(len(data)))
-        for i in range(len(data)):
-            stdev[i] = np.sqrt(sum(np.array(data[i])**2)/(len(data[i])-1))
-        return stdev
-    
-    diffg = diff_gauge(shape_diff)
-    
-    features = pd.DataFrame(X[j].columns, columns = ["feature"], index = np.arange(1,(len(X[j].columns)+1)))
-    features["median_diff"] = median_diff
-    features["shape_diff"] = diffg
-    features["modal_diff"] = modal_diff
-    features["skew_diff"] = skew_diff
-    features["cluster_diff"] = cluster_diff
-    features = FeatureScaler(features, ["median_diff", "shape_diff", "modal_diff", "skew_diff", "cluster_diff"], "minmax")
-    #features["combined_gauge1"] = np.array(features["median_diff"])+np.array(features["shape_diff"])+np.array(features["modal_diff"])
-    #features["combined_gauge2"] = (np.array(features["spread_diff"]))+np.array(features["median_diff"])
-    
-    ranking_dfs[j] = features
-    
-r = len(ranking_dfs[0])
-rank = list(np.zeros(len(ranking_dfs)))
-for h in range(len(ranking_dfs)):
-    ranking_dfs[h]["Combo_Gauge"] = 3*np.array(ranking_dfs[h]["cluster_diff"]) + 1*np.array(ranking_dfs[h]["median_diff"]) + 0*np.array(ranking_dfs[h]["shape_diff"]) + 2.3*np.array(ranking_dfs[h]["modal_diff"]) + 0*np.array(ranking_dfs[h]["skew_diff"])
-    ranking_dfs[h] = (ranking_dfs[h].sort_values(by = ["cluster_diff"], ascending = False ,ignore_index = True))
-    rank[h] = ranking_dfs[h][:r]
-
-print(rank)
-
-def figure(data, feature):
-    index = list(data.columns).index(feature)
-    return index
-
-a = [0]
-b = 0
-for i in range(len(rank)):
-    for j in (rank[i]["feature"]):
-        idx = figure(X[0], j)
-        a[b] = fig[i][idx]
-        b+=1
-        a.append(0)
-a = a[:-1]
-
-sampsize = 25
+sampsize = 100
 lst = list(np.zeros(ages))
 for t in range(ages):
     lst[t] = list(np.zeros(sampsize))
 
-scores = pd.DataFrame(list(range(1,(ages+1))), columns = ["Age"])
+scores = pd.DataFrame(list(range(1,(ages+1))), columns = ["NoDomain"])
 scores["Accuracy"] = lst
 scores["Precision"] = lst
 scores["Recall"] = lst
 _params = pd.DataFrame(list(range(1,(ages+1))), columns = ["Age"])
 _params["params"] = lst
 
-y_pred = [0]
-X_train_mod = list(np.zeros(len(X_train)))
-X_test_mod = list(np.zeros(len(X_test)))
 
+imp_features = ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+'''['temporal.autocorr',
+ 'temporal.min',
+ 'region.extent',
+ 'region.majaxis',
+ 'region.majmin.ratio',
+ "region.minaxis",
+ "mass.region",
+ "threshold.area",
+ "mass.total",
+ "freq.rangesz", 
+ "freq.maxsnr.freq", 
+ "freq.avgsnr", "temporal.max", "age"]'''
+#['temporal.autocorr', 'region.extent', 'mass.total', 'freq.rangesz', 'freq.avgsnr', 'age', 'mass.region']#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age']#['temporal.autocorr', 'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+
+#["region.minaxis", "region.majaxis", "mass.total", "threshold.area", "mass.region", "spatial.min", "freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "temporal.max", "age"] #['region.majaxis', 'threshold.area', 'mass.region', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+# "temporal.max", "spatial.min", 'freq.range.high',  'freq.range.low',
 for i in range(ages):
-    imp_features = list(rank[i]["feature"])
-    scores = pd.DataFrame(list(np.zeros(sampsize)), columns = ["Accuracy"])
-    scores["Precision"] = list(np.zeros(sampsize))
-    scores["Recall"] = list(np.zeros(sampsize))
-    for h in range(sampsize):
-            X_train[i], X_test[i], y_train[i], y_test[i] = test_train_split(X[i],y[i], 10, 0.3)
-            #print(i+1,i+1,i+1,i+1,i+1,i+1,i+1,i+1,i+1,i+1,i+1,i+1)
-            X_train_mod[i] = X_train[i][imp_features]
-            X_test_mod[i] = X_test[i][imp_features]
+            scores = pd.DataFrame(list(np.zeros(sampsize)), columns = ["Accuracy"])
+            scores["Precision"] = list(np.zeros(sampsize))
+            scores["Recall"] = list(np.zeros(sampsize))
+            for h in range(sampsize):
+                    X_train, X_test, y_train, y_test = test_train_split(X[i],y[i], 10, 0.3)
+                    X_train_mod = X_train[imp_features]
+                    X_test_mod = X_test[imp_features]
+                    
+                    '''ann = tf.keras.models.Sequential()
+                    ann.add(tf.keras.layers.Dense(units = 9, activation = 'relu'))
+                    ann.add(tf.keras.layers.Dense(units = 9, activation = 'relu'))
+                    ann.add(tf.keras.layers.Dense(units = 1, activation = 'sigmoid'))
+                    ann.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+                    ann.fit(X_train_mod, y_train, batch_size = 20, epochs = 3)
+                    y_pred = ann.predict(X_test_mod)
+                    y_pred = (y_pred>0.5)'''
+                    
+                    '''log = LogisticRegression(solver = "lbfgs")
+                    log.fit(X_train_mod, y_train)
+                    y_pred = log.predict(X_test_mod)'''
+                    
+                    '''gnb = GaussianNB(var_smoothing = 0.0001)
+                    gnb.fit(X_train_mod, y_train)
+                    y_pred = gnb.predict(X_test_mod)'''
+                    
+                    '''svc = SVC(kernel = "linear", probability = True)
+                    svc.fit(X_train_mod, y_train)
+                    y_pred = svc.predict(X_test_mod)'''
+                    
+                    rnf = RandomForestClassifier(n_estimators = 18, max_features = 5, class_weight = {0:1,1:1})
+                    rnf.fit(X_train_mod, y_train)
+                    y_pred = rnf.predict(X_test_mod)
+                    
+                    '''rnf1 = RandomForestClassifier(n_estimators = 10, max_features = 3, class_weight = {0:3.711,1:1})
+                    
+                    rnf2 = RandomForestClassifier(n_estimators = 20, max_features = 5, class_weight = {0:3.711,1:1})
+                    
+                    rnf3 = RandomForestClassifier(n_estimators = 20, max_features = 3, class_weight = {0:3.5,1:1})
+                    '''
+                    
+                    '''voter = VotingClassifier(estimators = [("rnf", rnf), ("rnf1", rnf1), ("rnf2", rnf2), ("rnf3", rnf3)], voting = "soft")
+                    voter.fit(X_train_mod, y_train)
+                    y_pred = voter.predict(X_test_mod)'''
+                    
+                    '''n_estimators = [16,17,18,19]
+                    max_features = [4,5,7,8]
+                    class_weight = [{0:3,1:1}, {0:4,1:1}, {0:3.5,1:1}, {0:3.711,1:1}, {0:1,1:1}, {0:2,1:1}]
+        
+                    param_grid = dict(n_estimators = n_estimators,
+                                      max_features = max_features,
+                                      class_weight = class_weight)
+                                      #criterion = criterion)
+                    
+                    grid = GridSearchCV(estimator = rnf,
+                                        param_grid = param_grid,
+                                        scoring = "f1",
+                                        verbose = 1,
+                                        n_jobs = -1)
+                    
+                    grid_result = grid.fit(X_train_mod, y_train)
+                    
+                    print("Best Score:", grid_result.best_score_)
+                    print("Best Parameters:", grid_result.best_params_)'''
+                    
+                    scores["Accuracy"][h] = accuracy_score(y_test, y_pred)
+                    scores["Precision"][h] = precision_score(y_test, y_pred)
+                    scores["Recall"][h] = recall_score(y_test, y_pred)
+                    print(i,h, sep = " ")
+                
+            scrdata = {"Accuracy":scores["Accuracy"], "Precision":scores["Precision"], "Recall":scores["Recall"]}
+            fig1, ax1 = plt.subplots()
+            ax1.boxplot(scrdata.values())
+            ax1.set_xticklabels(scrdata.keys())
+            plt.title(str(i)+" "+str(q))
+            plt.ylim(0.90,1.0)
             
-            '''ann = tf.keras.models.Sequential()
-            ann.add(tf.keras.layers.Dense(units = 7, activation = 'relu'))
-            ann.add(tf.keras.layers.Dense(units = 7, activation = 'relu'))
-            ann.add(tf.keras.layers.Dense(units = 1, activation = 'sigmoid'))
-            ann.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
-            ann.fit(X_train_mod[i], y_train[i], batch_size = 20, epochs = 200)
-            y_pred[i] = ann.predict(X_test_mod[i])
-            y_pred[i] = (y_pred[i]>0.5)'''
             
-            '''log = LogisticRegression(solver = "lbfgs")
-            log.fit(X_train_mod[i], y_train[i])
-            y_pred[i] = log.predict(X_test_mod[i])'''
-            
-            '''gnb = GaussianNB(var_smoothing = 0.0001)
-            gnb.fit(X_train_mod[i], y_train[i])
-            y_pred[i] = gnb.predict(X_test_mod[i])'''
-            
-            '''rnf = RandomForestClassifier(n_estimators = 15, max_features = 2, class_weight = {0:1,1:1})
-            
-            n_estimators = [12,15,17,20]
-            max_features = [5,6,7,8,9,10,11]
-            class_weight = [{0:3,1:1}, {0:4,1:1}, {0:3.5,1:1}, {0:3.711,1:1}, {0:1,1:1}, {0:2,1:1}]
-            #criterion = ["gini","entropy"]
-
-            param_grid = dict(n_estimators = n_estimators,
-                              max_features = max_features,
-                              class_weight = class_weight)
-                              #criterion = criterion)
-            
-            grid = GridSearchCV(estimator = rnf,
-                                param_grid = param_grid,
-                                scoring = "f1",
-                                verbose = 1,
-                                n_jobs = -1)
-            
-            grid_result = grid.fit(X_train_mod[i], y_train[i])
-            
-            print("Best Score:", grid_result.best_score_)
-            print("Best Parameters:", grid_result.best_params_)
-            
-            _params["params"][i][h] = grid_result.best_params_
+# =============================================================================
+# sampsize = 25
+# lst = list(np.zeros(ages))
+# for t in range(ages):
+#     lst[t] = list(np.zeros(sampsize))
+# 
+# scores = pd.DataFrame(list(range(1,(ages+1))), columns = ["NoDomain"])
+# scores["Accuracy"] = lst
+# scores["Precision"] = lst
+# scores["Recall"] = lst
+# _params = pd.DataFrame(list(range(1,(ages+1))), columns = ["Age"])
+# _params["params"] = lst
+# 
+# 
+# imp_features = ['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age', "region.majaxis", "mass.region", "temporal.max"]
+# '''['temporal.autocorr',
+#  'temporal.min',
+#  'region.extent',
+#  'region.majaxis',
+#  'region.majmin.ratio',
+#  "region.minaxis",
+#  "mass.region",
+#  "threshold.area",
+#  "mass.total",
+#  "freq.rangesz", 
+#  "freq.maxsnr.freq", 
+#  "freq.avgsnr", "temporal.max", "age"]'''
+# #['freq.range.low', 'region.majaxis', 'region.majmin.ratio', 'temporal.autocorr', 'temporal.min', 'region.minaxis', 'mass.total', 'spatial.min', 'freq.avgsnr', 'temporal.max']
+# 
+#  #["region.minaxis", "region.majaxis", "mass.total", "threshold.area", "mass.region", "spatial.min", "freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "temporal.max", "age"]
+# 
+# for i in range(ages):
+#         new_features = list(imp_features)
+#         for e in range(len(new_features)):
+#             scores = pd.DataFrame(list(np.zeros(sampsize)), columns = ["Accuracy"])
+#             scores["Precision"] = list(np.zeros(sampsize))
+#             scores["Recall"] = list(np.zeros(sampsize))
+#             performance = []
+#             print(new_features)
+#             print(len(new_features))
+#             for q in range(len(new_features)+1):
+#                 features = list(new_features)
+#                 if q<len(new_features):
+#                     features.remove(features[q])
+#                 for h in range(sampsize):
+#                     X_train, X_test, y_train, y_test = test_train_split(X[i],y[i], 10, 0.3)
+#                     X_train_mod = X_train[imp_features]
+#                     X_test_mod = X_test[imp_features]
+#                     
+#                     '''ann = tf.keras.models.Sequential()
+#                     ann.add(tf.keras.layers.Dense(units = 9, activation = 'relu'))
+#                     ann.add(tf.keras.layers.Dense(units = 9, activation = 'relu'))
+#                     ann.add(tf.keras.layers.Dense(units = 1, activation = 'sigmoid'))
+#                     ann.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+#                     ann.fit(X_train_mod, y_train, batch_size = 20, epochs = 3)
+#                     y_pred = ann.predict(X_test_mod)
+#                     y_pred = (y_pred>0.5)'''
+#                     
+#                     '''log = LogisticRegression(solver = "lbfgs")
+#                     log.fit(X_train_mod, y_train)
+#                     y_pred = log.predict(X_test_mod)'''
+#                     
+#                     '''gnb = GaussianNB(var_smoothing = 0.0001)
+#                     gnb.fit(X_train_mod, y_train)
+#                     y_pred = gnb.predict(X_test_mod)'''
+#                     
+#                     '''svc = SVC(kernel = "linear", probability = True)
+#                     svc.fit(X_train_mod, y_train)
+#                     y_pred = svc.predict(X_test_mod)'''
+#                     
+#                     if len(features)>=5:
+#                         rnf = RandomForestClassifier(n_estimators = 18, max_features = 5, class_weight = {0:1,1:1})
+#                     else:
+#                         rnf = RandomForestClassifier(n_estimators = 18, max_features = len(features), class_weight = {0:1,1:1})
+#                     rnf.fit(X_train_mod, y_train)
+#                     y_pred = rnf.predict(X_test_mod)
+#                      
+#                     
+#                     '''rnf1 = RandomForestClassifier(n_estimators = 10, max_features = 3, class_weight = {0:3.711,1:1})
+#                     
+#                     rnf2 = RandomForestClassifier(n_estimators = 20, max_features = 5, class_weight = {0:3.711,1:1})
+#                     
+#                     rnf3 = RandomForestClassifier(n_estimators = 20, max_features = 3, class_weight = {0:3.5,1:1})
+#                     '''
+#                     
+#                     '''voter = VotingClassifier(estimators = [("rnf", rnf), ("rnf1", rnf1), ("rnf2", rnf2), ("rnf3", rnf3)], voting = "soft")
+#                     voter.fit(X_train_mod, y_train)
+#                     y_pred = voter.predict(X_test_mod)'''
+#                     
+#                     '''n_estimators = [16,17,18,19]
+#                     max_features = [4,5,7,8]
+#                     class_weight = [{0:3,1:1}, {0:4,1:1}, {0:3.5,1:1}, {0:3.711,1:1}, {0:1,1:1}, {0:2,1:1}]
+#                     #criterion = ["gini","entropy"]
+#         
+#                     param_grid = dict(n_estimators = n_estimators,
+#                                       max_features = max_features,
+#                                       class_weight = class_weight)
+#                                       #criterion = criterion)
+#                     
+#                     grid = GridSearchCV(estimator = rnf,
+#                                         param_grid = param_grid,
+#                                         scoring = "f1",
+#                                         verbose = 1,
+#                                         n_jobs = -1)
+#                     
+#                     grid_result = grid.fit(X_train_mod, y_train)
+#                     
+#                     print("Best Score:", grid_result.best_score_)
+#                     print("Best Parameters:", grid_result.best_params_)
+#                     '''
+# 
+#                     scores["Accuracy"][h] = accuracy_score(y_test, y_pred)
+#                     scores["Precision"][h] = precision_score(y_test, y_pred)
+#                     scores["Recall"][h] = recall_score(y_test, y_pred)
+#                     print(i,e,q,h, sep = " ")
+#                 
+#                 scrdata = {"Accuracy":scores["Accuracy"], "Precision":scores["Precision"], "Recall":scores["Recall"]}
+#                 performance.append(np.mean(scores)["Accuracy"])
+#                 
+#                 print(np.mean(scores)["Accuracy"])
+#                 
+#                 '''fig1, ax1 = plt.subplots()
+#                 ax1.boxplot(scrdata.values())
+#                 ax1.set_xticklabels(scrdata.keys())
+#                 plt.title(str(i)+" "+str(q))'''
+#             performance = [round(num, ndigits = 5) for num in performance]
+#             print(performance)
+#             if performance.index(max(performance))<len(new_features):
+#                 new_features.remove(new_features[performance.index(max(performance))])
+#             else:
+#                 new_features = new_features
+#                 print("No changes ahead")
+#                 print(new_features)
+#                 sys.exit()
+# =============================================================================
             
         
-            rnf = RandomForestClassifier(n_estimators = _params["params"][i][h]["n_estimators"], max_features = _params["params"][i][h]["max_features"], class_weight = _params["params"][i][h]["class_weight"])
-            rnf.fit(X_train_mod[i], y_train[i])
-            y_pred[i] = rnf.predict(X_test_mod[i])'''
-            
-            svr = SVC(kernel = "linear")
-            svr.fit(X_train_mod[i], y_train[i])
-            y_pred = svr.predict(X_test_mod[i])
-            
-            #print(confusion_matrix(y_test[i], y_pred))
-            scores["Accuracy"][h] = accuracy_score(y_test[i], y_pred)
-            scores["Precision"][h] = precision_score(y_test[i], y_pred)
-            scores["Recall"][h] = recall_score(y_test[i], y_pred)
-            
-            print(i,h, sep = " ")
+
     
-    scrdata = {"Accuracy":scores["Accuracy"], "Precision":scores["Precision"], "Recall":scores["Recall"]}
-    
-    fig1, ax1 = plt.subplots()
-    ax1.boxplot(scrdata.values())
-    ax1.set_xticklabels(scrdata.keys())
-    plt.title("Age:"+str(i+1))
-    
-    '''for j in range(ages):
-        print(cm[j])
-        print("accuracy:",acc[j])
-        print("precision:",pre[j])
-        print("recall:",rec[j])'''
-    
+# =============================================================================
+# Only Domain set/RNF-17-7-3.711:1:
+# new_features = ['region.majaxis', 'threshold.area', 'mass.region', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+#                ['region.majaxis', 'threshold.area', 'mass.region', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+# Only Domain set/RNF-18-5-1:1:              
+# new_features = ['region.minaxis', 'region.majaxis', 'mass.total', 'mass.region', 'age']
+# =============================================================================
+# Full set:
+#new_features = ['region.minaxis', 'region.majaxis', 'mass.total', 'threshold.area', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age']
+# =============================================================================
+# Only age 1:
+#['freq.avgsnr',
+#  'freq.maxsnr',
+#  'freq.range.high',
+#  'freq.range.low',
+#  'freq.rangesz',
+#  'length',
+#  'mass.perc',
+#  'mass.region',
+#  'region.centroid.0',
+#  'region.extent',
+#  'region.majaxis',
+#  'region.majmin.ratio',
+#  'region.minaxis',
+#  'spatial.COMall.y',
+#  'spatial.avg',
+#  'spatial.max',
+#  'spatial.min',
+#  'spatial.std',
+#  'temporal.autocorr',
+#  'temporal.min',
+#  'temporal.n.freq',
+#  'temporal.std',
+#  'threshold.area']
+# =============================================================================
+# =============================================================================
+# pca = PCA(n_components = 2)
+# pca.fit(X[0])
+# df3 = pd.DataFrame(pca.components_)
+# dfmat = np.matrix(df3).T
+# datamat = np.matrix(X[0])
+# pca_trans = pd.DataFrame(datamat @ dfmat)
+# 
+# plt.scatter(pca_trans.iloc[:,0], pca_trans.iloc[:,1], c = y[0], alpha = 0.5)
+# 
+# from mpl_toolkits.mplot3d import Axes3D
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection = "3d")
+# ax.scatter(pca_trans.iloc[:,0], pca_trans.iloc[:,1], pca_trans.iloc[:,2], c = y[0], marker = "^", alpha = 0.3)
+# ax.view_init(elev = 0, azim = 180)
+# plt.show()
+# =============================================================================
 
 
 
-for z in range(ages):
-    scrdata = {"Accuracy":scores["Accuracy"][z], "Precision":scores["Precision"][z], "Recall":scores["Recall"][z]}
-    
-    fig1, ax1 = plt.subplots()
-    ax1.boxplot(scrdata.values())
-    ax1.set_xticklabels(scrdata.keys())
-    plt.title("Age:"+str(z+1))
+# =============================================================================
+# for n_comp in sp.arange(1,4):
+#     
+#     svd = sp.linalg.svd(X[0], full_matrices = False)
+#     sigma = np.zeros((n_comp, n_comp))
+#     for i in range(n_comp):
+#         sigma[i,i] = svd[1][i]
+#     a1 = svd[0][:, 0:n_comp] @ sigma @ svd[2][0:n_comp, :]
+#     clms = []
+#     for j in range(len(X[0].columns)):
+#         clms.append("SVD"+str(j+1))
+#     adf = pd.DataFrame(a1)
+#     adf.columns = clms
+#     adf.index = X[0].index
+#     '''plt.figure(1)
+#     plt.scatter(adf["SVD1"], adf["SVD2"], c = y[0], cmap = "Spectral", alpha = 0.3)
+#     plt.xlabel("SVD1")
+#     plt.ylabel("SVD2")
+#     plt.legend()'''
+#     
+#     fig = plt.figure()
+#     ax = fig.add_subplot(111, projection = "3d")
+#     ax.scatter(adf["SVD1"], adf["SVD2"], adf["SVD3"], c = y[0], marker = "^", alpha = 0.3)
+#     ax.view_init(elev = 50, azim = 130)
+#     plt.show()
+# =============================================================================
+
+# =============================================================================
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection = "3d")
+# ax.scatter(adf.iloc[:,0], adf.iloc[:,1], adf.iloc[:,2], c = y[0], marker = "^", alpha = 0.3)
+# ax.view_init(elev = 45, azim = 45)
+# plt.show()
+# =============================================================================
+
+# =============================================================================
+# 
+# ColorMap shades:
+#[Accent, Accent_r, Blues, Blues_r, BrBG, BrBG_r, BuGn, BuGn_r, BuPu, BuPu_r, CMRmap, CMRmap_r, Dark2, Dark2_r, GnBu, GnBu_r, Greens, Greens_r, Greys, Greys_r, OrRd, OrRd_r, Oranges, Oranges_r, PRGn, PRGn_r, Paired, Paired_r, Pastel1, Pastel1_r, Pastel2, Pastel2_r, PiYG, PiYG_r, PuBu, PuBuGn, PuBuGn_r, PuBu_r, PuOr, PuOr_r, PuRd, PuRd_r, Purples, Purples_r, RdBu, RdBu_r, RdGy, RdGy_r, RdPu, RdPu_r, RdYlBu, RdYlBu_r, RdYlGn, RdYlGn_r, Reds, Reds_r, Set1, Set1_r, Set2, Set2_r, Set3, Set3_r, Spectral, Spectral_r, Wistia, Wistia_r, YlGn, YlGnBu, YlGnBu_r, YlGn_r, YlOrBr, YlOrBr_r, YlOrRd, YlOrRd_r, afmhot, afmhot_r, autumn, autumn_r, binary, binary_r, bone, bone_r, brg, brg_r, bwr, bwr_r, cividis, cividis_r, cool, cool_r, coolwarm, coolwarm_r, copper, copper_r, cubehelix, cubehelix_r, flag, flag_r, gist_earth, gist_earth_r, gist_gray, gist_gray_r, gist_heat, gist_heat_r, gist_ncar, gist_ncar_r, gist_rainbow, gist_rainbow_r, gist_stern, gist_stern_r, gist_yarg, gist_yarg_r, gnuplot, gnuplot2, gnuplot2_r, gnuplot_r, gray, gray_r, hot, hot_r, hsv, hsv_r, icefire, icefire_r, inferno, inferno_r, jet, jet_r, magma, magma_r, mako, mako_r, nipy_spectral, nipy_spectral_r, ocean, ocean_r, pink, pink_r, plasma, plasma_r, prism, prism_r, rainbow, rainbow_r, rocket, rocket_r, seismic, seismic_r, spring, spring_r, summer, summer_r, tab10, tab10_r, tab20, tab20_r, tab20b, tab20b_r, tab20c, tab20c_r, terrain, terrain_r, twilight, twilight_r, twilight_shifted, twilight_shifted_r, viridis, viridis_r, vlag, vlag_r, winter, winter_r]
+# 
+# =============================================================================
+
+'''
+wave1 = []
+wave2 = []
+for i in range(50):
+    wave1.append(5*np.sin(i/5)-15)
+    wave2.append(np.tan(i/5)/1.5 + 15)
+plt.figure(1)
+plt.plot(sp.arange(0,10,1/5), wave1)
+plt.plot(sp.arange(0,10,1/5), wave2)
+plt.xlim(0,10)
+plt.ylim(-25,28)
+
+wave12 = np.array(wave1) + np.array(wave2)
+wave21 = 0.254*np.array(wave1) + 1.12*np.array(wave2)
+
+plt.figure(2)
+plt.plot(sp.arange(0,10,1/5), wave21, c = "maroon")
+plt.xlim(0,10)
+plt.ylim(-15,30)
+
+plt.scatter(X[0]["spatial.COMdom.x"], X[0]["spatial.COMdom.y"],)'''
+
+'''
+from matplotlib.image import img
+Xt = X[0]["spatial.COMdom.y"]
+yt = X[0]["spatial.COMdom.x"]
+Xt = 104*Xt+320
+yt = 140*yt+400
+
+rd = img.imread("/Users/saathvikdirisala/Downloads/brain_outline.jpg")
+image = np.mean(rd,-1)
+plt.figure(1)
+plt.imshow(image, cmap = "rainbow")
+plt.scatter(Xt, yt, alpha = 0.3)
+plt.xlim(0,600)
+plt.ylim(0,800)'''
 
 
-'''[          feature  median_diff  shape_diff  modal_diff  skew_diff  Combo_Gauge
-0    freq.rangesz     0.814445    0.741052    1.000000   0.478007     1.741052
-1     mass.region     0.969968    0.926299    0.762152   1.000000     1.688452
-2  region.minaxis     1.000000    1.000000    0.638011   0.812527     1.638011
-3      mass.total     0.766561    0.820709    0.751364   0.403153     1.572073
-4       mass.perc     0.901272    0.872639    0.538630   0.724833     1.411269,             feature  median_diff  ...  skew_diff  Combo_Gauge
-0  freq.maxsnr.freq     0.962928  ...   0.983994     1.815520
-1    region.minaxis     0.987435  ...   0.742868     1.677627
-2      freq.rangesz     0.770176  ...   0.602764     1.644630
-3        mass.total     0.771140  ...   0.212618     1.582666
-4       mass.region     0.921899  ...   0.813385     1.483573
+#['temporal.autocorr', 'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age']
+#['temporal.autocorr', 'region.extent', 'mass.total', 'freq.rangesz', 'freq.avgsnr', 'age', 'mass.region']
 
-[5 rows x 6 columns],             feature  median_diff  ...  skew_diff  Combo_Gauge
-0   freq.range.high     0.000000  ...   0.547887     1.762179
-1      freq.rangesz     0.943275  ...   0.990878     1.758056
-2  freq.maxsnr.freq     0.911059  ...   0.508924     1.613941
-3            length     0.975367  ...   0.374369     1.503718
-4    region.minaxis     0.794270  ...   0.379932     1.480601
 
-[5 rows x 6 columns],             feature  median_diff  ...  skew_diff  Combo_Gauge
-0    freq.integrate     0.589518  ...   0.214563     1.628883
-1  freq.maxsnr.freq     0.770477  ...   0.213025     1.608313
-2  spatial.COMdom.x     0.109838  ...   0.062520     1.579010
-3      freq.rangesz     0.604201  ...   0.169924     1.530849
-4    region.minaxis     0.758634  ...   0.162129     1.450145
-
-[5 rows x 6 columns],              feature  median_diff  ...  skew_diff  Combo_Gauge
-0   spatial.COMdom.x     0.868895  ...   0.635241     1.883492
-1   freq.maxsnr.freq     0.469039  ...   0.082533     1.794414
-2     freq.integrate     0.857970  ...   0.959057     1.611752
-3  region.centroid.0     0.797297  ...   0.578798     1.585994
-4       freq.rangesz     1.000000  ...   0.943171     1.432800
-
-[5 rows x 6 columns],             feature  median_diff  ...  skew_diff  Combo_Gauge
-0  spatial.COMdom.x     0.252135  ...   0.095225     1.891724
-1  freq.maxsnr.freq     0.883431  ...   0.822676     1.667038
-2            length     1.000000  ...   0.841877     1.627217
-3    freq.integrate     0.924385  ...   1.000000     1.613235
-4      freq.rangesz     0.713727  ...   0.556998     1.597500
-
-[5 rows x 6 columns],           feature  median_diff  shape_diff  modal_diff  skew_diff  Combo_Gauge
-0    freq.rangesz     1.000000    0.877837    1.000000   0.680484     1.877837
-1          length     0.773611    0.764847    0.976365   0.330084     1.741212
-2  region.minaxis     0.887897    0.850161    0.723358   0.663091     1.573519
-3  freq.integrate     0.670595    0.912162    0.606556   0.988949     1.518718
-4      mass.total     0.651503    0.798627    0.707622   0.635051     1.506250,           feature  median_diff  shape_diff  modal_diff  skew_diff  Combo_Gauge
-0          length     0.832827    0.913714    1.000000   0.191714     1.913714
-1  region.minaxis     0.718326    0.747252    0.873710   0.191117     1.620962
-2    freq.rangesz     0.817057    0.748278    0.767944   0.161746     1.516222
-3      mass.total     0.654430    0.658379    0.745256   0.266573     1.403635
-4  freq.integrate     0.591622    0.714607    0.652985   0.241570     1.367592,           feature  median_diff  shape_diff  modal_diff  skew_diff  Combo_Gauge
-0  region.minaxis     0.864644    0.716616    1.000000   0.712458     1.716616
-1          length     0.729078    0.928955    0.768293   0.165880     1.697247
-2  freq.integrate     0.660456    0.742349    0.935762   0.847222     1.678111
-3     spatial.min     1.000000    1.000000    0.652954   0.418160     1.652954
-4    temporal.max     0.819060    0.783161    0.787429   0.797549     1.570591,              feature  median_diff  ...  skew_diff  Combo_Gauge
-0   spatial.COMdom.x     0.759274  ...   0.762256     1.696225
-1   freq.maxsnr.freq     0.649562  ...   0.289148     1.686750
-2     freq.integrate     0.737376  ...   0.845927     1.630762
-3             length     0.771035  ...   0.225609     1.622965
-4  region.centroid.0     0.710071  ...   0.646816     1.585837
-
-[5 rows x 6 columns],             feature  median_diff  ...  skew_diff  Combo_Gauge
-0            length     0.925949  ...   0.830819     1.699899
-1  freq.maxsnr.freq     0.727417  ...   0.322221     1.669480
-2      freq.rangesz     1.000000  ...   0.938038     1.647300
-3  spatial.COMdom.y     0.465801  ...   0.523554     1.645972
-4    region.minaxis     0.879812  ...   0.723196     1.448039
-
-[5 rows x 6 columns],             feature  median_diff  ...  skew_diff  Combo_Gauge
-0  spatial.COMdom.y     0.160467  ...   0.370685     1.672098
-1  freq.maxsnr.freq     0.742637  ...   0.015158     1.600411
-2            length     1.000000  ...   0.360719     1.594176
-3         mass.perc     0.737205  ...   0.553563     1.520799
-4        mass.total     0.556116  ...   0.746250     1.473080
-
-[5 rows x 6 columns],              feature  median_diff  ...  skew_diff  Combo_Gauge
-0   spatial.COMdom.y     0.503864  ...   0.239235     1.819970
-1  region.centroid.1     0.414033  ...   0.129722     1.677365
-2    freq.range.high     0.101481  ...   0.379614     1.624229
-3     region.minaxis     1.000000  ...   0.395013     1.596375
-4   freq.maxsnr.freq     0.758986  ...   0.284013     1.574601
-
-[5 rows x 6 columns],              feature  median_diff  ...  skew_diff  Combo_Gauge
-0  region.centroid.0     0.942076  ...   1.000000     1.837924
-1   spatial.COMdom.x     0.946551  ...   0.980619     1.788063
-2        mass.region     0.946325  ...   0.436245     1.584345
-3   freq.maxsnr.freq     0.485444  ...   0.191280     1.535820
-4             length     0.981187  ...   0.856022     1.535002
-
-[5 rows x 6 columns]]'''
-    
-    
