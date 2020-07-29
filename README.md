@@ -124,3 +124,43 @@ P14:
 ['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
 
 
+Feature list for "No Domain" data:
+
+*These features separate signal and artifact perfectly, so they can be used individually and the accuracy will still be at 100%
+
+- 'region.minaxis'
+- 'region.majmin.ratio'
+- 'region.majaxis'
+- 'mass.perc'
+- 'mass.region'
+- 'region.orient'
+- 'mass.total'
+- 'region.extent'
+- 'region.centroid.1'
+- 'region.centroid.0'
+- 'region.eccentricity'
+
+*If they overfit for other data and do no generalize well, the feature list below can be used to get a better model. The features above were excluded from the full list while generating the list below. 
+
+['temporal.std',
+ 'spatial.min',
+ 'freq.rangesz',
+ 'temporal.max',
+ 'temporal.autocorr',
+ 'length',
+ 'freq.range.high',
+ 'freq.integrate',
+ 'freq.range.low',
+ 'freq.avgsnr',
+ 'freq.maxsnr.freq',
+ 'temporal.min']
+
+Model used: Random Forest
+Hyperparameters:
+- n_estimators = 18
+- max_features = 5
+
+Performance with this list:
+Accuracy: 92.1%
+Precision: 89.6%
+Recall: 71.1%

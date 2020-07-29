@@ -147,9 +147,8 @@ data[data["signal"]==1] = missing_val_fill(data[data["signal"]==1], col, data[da
 data[data["signal"]==0] = missing_val_fill(data[data["signal"]==0], col, data[data["signal"]==0].median())
 
 
-data = (data.pipe(missing_val_fill, col = ["threshold.area", "threshold.perc"], filler = 0))
-            #.pipe(split, conditions = data["threshold.area"]!=0))
-            #.pipe(split, conditions = data["threshold.area"]!=0)
+data = (data.pipe(missing_val_fill, col = ["threshold.area", "threshold.perc"], filler = 0)
+            .pipe(split, conditions = data["threshold.area"]==0))
 
 data = [data]
 
@@ -226,7 +225,15 @@ y_test = list(np.zeros(ages))
 #         temp_df = FeatureScaler(temp_df, ["signal", "artifact"], "minmax")
 #         shape_diff[a-1] = list(np.array(temp_df["signal"])-np.array(temp_df["artifact"]))
 #         modal_diff[a-1] = abs(loc[list(temp_df["signal"]).index(max(temp_df["signal"]))]-loc[list(temp_df["artifact"]).index(max(temp_df["artifact"]))])
-#         cluster_diff[a-1] = modal_diff[a-1]*(1/stdev(sig))*(1/stdev(art))
+#         if stdev(sig) == 0:
+#             sdevt = 1/(1*(10**-7))
+#         else:
+#             sdevt = 1/stdev(sig)
+#         if stdev(art) == 0:
+#             adevt = 1/(1*(10**-7))
+#         else:
+#             adevt = 1/stdev(art)
+#         cluster_diff[a-1] = modal_diff[a-1]*(sdevt)*(adevt)
 #         
 #     
 #     def diff_gauge(data):
@@ -274,8 +281,12 @@ y_test = list(np.zeros(ages))
 # =============================================================================
 
 # =============================================================================
-# feat_df = pd.DataFrame(np.zeros(36).reshape(1,36))
-# feat_df.columns = X[0].columns
+# clum = list(X[0].columns)
+# good = ["region.minaxis","region.majmin.ratio","region.majaxis","mass.perc","mass.region","region.orient", "mass.total", "region.extent", "region.centroid.1", "region.centroid.0", "region.eccentricity"]
+# for i in good:
+#     clum.remove(i)
+# 
+# we = clum
 # '''['temporal.autocorr',
 #   'temporal.min',
 #   'region.extent',
@@ -291,6 +302,10 @@ y_test = list(np.zeros(ages))
 #   "temporal.max",
 #   "spatial.min",
 #   "age"]'''
+# #X[0].columns
+# feat_df = pd.DataFrame(np.zeros(len(we)).reshape(1,len(we)))
+# feat_df.columns = we
+# 
 # for i in range(200):
 #     sel = SelectFromModel(RandomForestClassifier(n_estimators = 18, max_features = 5))
 #     X_train, X_test, y_train, y_test = test_train_split(X[0][feat_df.columns],y[0], 10, 0.3)
@@ -299,13 +314,13 @@ y_test = list(np.zeros(ages))
 #     print(i)
 #     for j in selected_feat:
 #         feat_df[j] = feat_df[j] + 1
-# vals = np.concatenate((np.array(feat_df.columns).reshape(36,1), np.array(feat_df.values).reshape(36,1)), axis = -1)
+# vals = np.concatenate((np.array(feat_df.columns).reshape(len(we),1), np.array(feat_df.values).reshape(len(we),1)), axis = -1)
 # dfret = pd.DataFrame(vals, columns = ["Feature", "Count"])
 # dfret =  dfret.sort_values(by = ["Count"], ascending = False, ignore_index = True)
 # print(dfret)
 # =============================================================================
 
-sampsize = 1
+sampsize = 50
 lst = list(np.zeros(ages))
 for t in range(ages):
     lst[t] = list(np.zeros(sampsize))
@@ -318,7 +333,10 @@ _params = pd.DataFrame(list(range(1,(ages+1))), columns = ["Age"])
 _params["params"] = lst
 
 
-imp_features = ['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+imp_features = feats#new_features[:]
+#["temporal.std", "spatial.min", "spatial.min", ""]
+#['region.minaxis']
+#['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']#['freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'spatial.min', 'age']
 
 #['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
 '''['temporal.autocorr',
@@ -369,7 +387,7 @@ for i in range(ages):
                     svc.fit(X_train_mod, y_train)
                     y_pred = svc.predict(X_test_mod)'''
                     
-                    rnf = RandomForestClassifier(n_estimators = 18, max_features = 5, class_weight = {0:1,1:1})
+                    rnf = RandomForestClassifier(n_estimators = 18, max_features = 4, class_weight = {0:1,1:1})
                     rnf.fit(X_train_mod, y_train)
                     y_pred = rnf.predict(X_test_mod)
                     
@@ -416,7 +434,7 @@ for i in range(ages):
             ax1.boxplot(scrdata.values())
             ax1.set_xticklabels(scrdata.keys())
             plt.title("Age(s):"+" "+str(float(min(np.unique(X[0]["age"]))))+" "+str(float(max(np.unique(X[0]["age"])))))
-            plt.ylim(0.90,1.0)
+            plt.ylim(0.8,1.02)
             
             
 # =============================================================================
@@ -433,7 +451,8 @@ for i in range(ages):
 # _params["params"] = lst
 # 
 # 
-# imp_features = ['temporal.autocorr',
+# imp_features = feats#thelist
+# '''['temporal.autocorr',
 #   'temporal.min',
 #   'region.extent',
 #   'region.majaxis',
@@ -447,7 +466,7 @@ for i in range(ages):
 #   "freq.avgsnr",
 #   "temporal.max",
 #   "spatial.min",
-#   "age"]#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age', "region.majaxis", "mass.region", "temporal.max"]
+#   "age"]'''#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age', "region.majaxis", "mass.region", "temporal.max"]
 # 
 # #['freq.range.low', 'region.majaxis', 'region.majmin.ratio', 'temporal.autocorr', 'temporal.min', 'region.minaxis', 'mass.total', 'spatial.min', 'freq.avgsnr', 'temporal.max']
 # 
@@ -556,8 +575,8 @@ for i in range(ages):
 #                 print("No changes ahead")
 #                 print(new_features)
 #                 sys.exit()
+#             
 # =============================================================================
-            
         
 
     
@@ -809,46 +828,48 @@ age_features = [['temporal.min','temporal.autocorr','region.extent','region.maja
                 ['spatial.min', 'region.minaxis', 'freq.rangesz','temporal.autocorr', 'threshold.area', 'region.majaxis','mass.region', 'region.majmin.ratio', 'region.extent', 'temporal.max', 'temporal.min'],
                 ['temporal.autocorr', 'region.extent', 'region.majmin.ratio', 'freq.maxsnr.freq', 'region.minaxis', 'threshold.area', 'spatial.min', 'mass.region','region.majaxis', 'freq.rangesz'],
                 ['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']]
-
-features_tally = pd.DataFrame(np.zeros((36,14)), columns = sp.arange(1,15), index = X[0].columns)
-q = 1
-for i in age_features:
-    for j in i:
-        features_tally[q][j]+=1
-    q+=1
-
-features_tally["Sorter"] = np.zeros(36)
-for i in range(len(features_tally)):
-    features_tally["Sorter"][i] = sum(features_tally.iloc[i,:])
-
-features_tally = features_tally.sort_values(by = ["Sorter"], ascending = False)
-features_tally_0 = features_tally.iloc[:14,:14]
-features_tally_1 = pd.DataFrame(features_tally_0)
-perf_df = pd.DataFrame(np.zeros((3,14)), columns = features_tally_0.columns, index = ["Accuracy", "Precision", "Recall"])
-features_tally_1 = features_tally_1.append(perf_df)
-
-for i in range(len(features_tally_1.columns)):
-    dt = X[0][X[0]["age"]==i+1][age_features[i]]
-    yt = y[0][dt.index]
-    rnf = RandomForestClassifier(n_estimators = 18, max_features = 5, class_weight = {0:1,1:1})
-    for j in range(10):
-        print(i,j)
-        X_train, X_test, y_train, y_test = test_train_split(dt,yt, 10, 0.3)
-        rnf.fit(X_train, y_train)
-        y_pred = rnf.predict(X_test)
-        features_tally_1.iloc[14,i] += accuracy_score(y_test, y_pred)
-        features_tally_1.iloc[15,i] += precision_score(y_test, y_pred)
-        features_tally_1.iloc[16,i] += recall_score(y_test, y_pred)
-        total = len(y_test) 
-        one_count = np.sum(y_test)
-        zero_count = total - one_count 
-        lm = [y for _, y in sorted(zip(y_pred, y_test), reverse = True)] 
-        xc = np.arange(0, total + 1) 
-        yc = np.append([0], np.cumsum(lm)) 
-        plt.figure(i)
-        plt.plot(xc, yc, c = 'b', label = 'Random classifier', linewidth = 2)
-        plt.plot([0, one_count, total], [0, one_count, one_count], c = 'grey', linewidth = 2, alpha = 0.5, linestyle = "dashed")
-    features_tally_1.iloc[14:17,i] = features_tally_1.iloc[14:17,i]/100
+# =============================================================================
+# 
+# features_tally = pd.DataFrame(np.zeros((36,14)), columns = sp.arange(1,15), index = X[0].columns)
+# q = 1
+# for i in age_features:
+#     for j in i:
+#         features_tally[q][j]+=1
+#     q+=1
+# 
+# features_tally["Sorter"] = np.zeros(36)
+# for i in range(len(features_tally)):
+#     features_tally["Sorter"][i] = sum(features_tally.iloc[i,:])
+# 
+# features_tally = features_tally.sort_values(by = ["Sorter"], ascending = False)
+# features_tally_0 = features_tally.iloc[:14,:14]
+# features_tally_1 = pd.DataFrame(features_tally_0)
+# perf_df = pd.DataFrame(np.zeros((3,14)), columns = features_tally_0.columns, index = ["Accuracy", "Precision", "Recall"])
+# features_tally_1 = features_tally_1.append(perf_df)
+# 
+# for i in range(len(features_tally_1.columns)):
+#     dt = X[0][X[0]["age"]==i+1][age_features[i]]
+#     yt = y[0][dt.index]
+#     rnf = RandomForestClassifier(n_estimators = 18, max_features = 5, class_weight = {0:1,1:1})
+#     for j in range(10):
+#         print(i,j)
+#         X_train, X_test, y_train, y_test = test_train_split(dt,yt, 10, 0.3)
+#         rnf.fit(X_train, y_train)
+#         y_pred = rnf.predict(X_test)
+#         features_tally_1.iloc[14,i] += accuracy_score(y_test, y_pred)
+#         features_tally_1.iloc[15,i] += precision_score(y_test, y_pred)
+#         features_tally_1.iloc[16,i] += recall_score(y_test, y_pred)
+#         total = len(y_test) 
+#         one_count = np.sum(y_test)
+#         zero_count = total - one_count 
+#         lm = [y for _, y in sorted(zip(y_pred, y_test), reverse = True)] 
+#         xc = np.arange(0, total + 1) 
+#         yc = np.append([0], np.cumsum(lm)) 
+#         plt.figure(i)
+#         plt.plot(xc, yc, c = 'b', label = 'Random classifier', linewidth = 2)
+#         plt.plot([0, one_count, total], [0, one_count, one_count], c = 'grey', linewidth = 2, alpha = 0.5, linestyle = "dashed")
+#     features_tally_1.iloc[14:17,i] = features_tally_1.iloc[14:17,i]/100
+# =============================================================================
 
 
 '''def sawtooth(x, slope, period, buffer):
@@ -893,5 +914,74 @@ plt.ylim(-4,4)
 # plt.ylim(0.9,1)
 # =============================================================================
 
-
-
+# =============================================================================
+#                 Feature Count
+# 0           mass.region   177
+# 1            mass.total   170
+# 2        region.majaxis   169
+# 3        region.minaxis   169
+# 4         region.extent   161
+# 5   region.majmin.ratio   160
+# 6     temporal.autocorr     0
+# 7          temporal.min     0
+# 8        threshold.area     0
+# 9          freq.rangesz     0
+# 10     freq.maxsnr.freq     0
+# 11          freq.avgsnr     0
+# 12         temporal.max     0
+# 13          spatial.min     0
+# 14                  age     0
+# 
+#                 Feature Count
+# 0           mass.region   172
+# 1   region.majmin.ratio   170
+# 2     region.centroid.0   166
+# 3         region.orient   161
+# 4     region.centroid.1   160
+# 5        region.majaxis   159
+# 6             mass.perc   159
+# 7            mass.total   158
+# 8   region.eccentricity   154
+# 9        region.minaxis   153
+# 10        region.extent   149
+# 11          spatial.min    19
+# 12         temporal.max     4
+# 13         freq.rangesz     2
+# 14          spatial.max     1
+# 15         temporal.std     1
+# 16      temporal.n.freq     0
+# 17       threshold.area     0
+# 18         temporal.min     0
+# 19       threshold.perc     0
+# 20    temporal.autocorr     0
+# 21          spatial.std     0
+# 22    spatial.n.domains     0
+# 23          freq.avgsnr     0
+# 24          spatial.avg     0
+# 25     spatial.COMdom.y     0
+# 26     spatial.COMdom.x     0
+# 27     spatial.COMall.y     0
+# 28     spatial.COMall.x     0
+# 29       freq.integrate     0
+# 30               length     0
+# 31       freq.range.low     0
+# 32      freq.range.high     0
+# 33     freq.maxsnr.freq     0
+# 34          freq.maxsnr     0
+# 35                  age     0
+# 
+# =============================================================================
+#[                feature  median_diff  ...  cluster_diff  Combo_Gauge
+# 0        region.minaxis     1.000000  ...  1.000000e+00     5.640705
+# 1   region.majmin.ratio     1.000000  ...  1.000000e+00     5.640705
+# 2        region.majaxis     1.000000  ...  1.000000e+00     5.640705
+# 3             mass.perc     1.000000  ...  1.000000e+00     5.640705
+# 4           mass.region     1.000000  ...  1.000000e+00     5.640705
+# 5         region.orient     1.000000  ...  1.000000e+00     5.640705
+# 6            mass.total     1.000000  ...  1.000000e+00     5.640705
+# 7         region.extent     1.000000  ...  1.000000e+00     5.640705
+# 8     region.centroid.1     1.000000  ...  1.000000e+00     5.640705
+# 9     region.centroid.0     1.000000  ...  1.000000e+00     5.640705
+# 10  region.eccentricity     1.000000  ...  1.000000e+00     5.640705
+# =============================================================================
+# =============================================================================
