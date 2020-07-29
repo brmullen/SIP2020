@@ -61,6 +61,7 @@ Current list that we will use to compare models (3 regoin, 3 spatial, 3 freq, 1 
 - [ ] Compare each age group to all the data together (total of 8 ML algorithms)
     Use randomForest for classification
 
+==================================================================
 
 New list:
 
@@ -77,4 +78,49 @@ New list:
 'age']
 
 Note: I added 'temporal.autocorr' and 'region.extent' because they work well when I run the whole dataset through a random forest classifier with 18 branches and 5 max features per branch.
+
+Age-wise list of best-performing features:
+
+P1:
+['temporal.min','temporal.autocorr','region.extent','region.majaxis','region.majmin.ratio',"region.minaxis","mass.region","threshold.area","mass.total","freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "spatial.min","temporal.max"]
+
+P2:
+['freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr','temporal.autocorr', 'temporal.min', 'temporal.max', 'mass.region', 'region.majaxis', 'region.minaxis', 'threshold.area', 'spatial.min','region.extent']
+
+P3:
+['mass.region', 'region.majaxis', 'region.minaxis','threshold.area', 'temporal.autocorr','spatial.min', 'temporal.min', 'region.extent','temporal.max', 'freq.maxsnr.freq']
+
+P4:
+['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
+P5:
+['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+                
+P6:
+['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+                
+P7:
+['temporal.autocorr','temporal.min', 'region.extent', 'region.majmin.ratio', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.rangesz', 'temporal.max', 'spatial.min', 'mass.total']
+
+P8:
+['region.minaxis', 'threshold.area', 'mass.region','region.majmin.ratio', 'freq.rangesz', 'region.majaxis','temporal.autocorr', 'temporal.max']
+
+P9:
+['temporal.autocorr',"freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'temporal.max']
+
+P10:
+['temporal.autocorr','temporal.min','region.extent','region.majaxis','region.majmin.ratio','region.minaxis','mass.region','threshold.area','freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr']
+
+P11:
+['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
+P12:
+['spatial.min', 'region.minaxis', 'freq.rangesz','temporal.autocorr', 'threshold.area', 'region.majaxis','mass.region', 'region.majmin.ratio', 'region.extent', 'temporal.max', 'temporal.min']
+
+P13:
+['temporal.autocorr', 'region.extent', 'region.majmin.ratio', 'freq.maxsnr.freq', 'region.minaxis', 'threshold.area', 'spatial.min', 'mass.region','region.majaxis', 'freq.rangesz']
+
+P14:
+['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
 

@@ -22,6 +22,7 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, precision_score
+from sklearn.feature_selection import SelectFromModel
 from sklearn.svm import SVR, SVC
 import sys
 import scipy as sp
@@ -146,8 +147,8 @@ data[data["signal"]==1] = missing_val_fill(data[data["signal"]==1], col, data[da
 data[data["signal"]==0] = missing_val_fill(data[data["signal"]==0], col, data[data["signal"]==0].median())
 
 
-data = (data.pipe(missing_val_fill, col = ["threshold.area", "threshold.perc"], filler = 0)
-            .pipe(split, conditions = data["age"].between(1,14)))
+data = (data.pipe(missing_val_fill, col = ["threshold.area", "threshold.perc"], filler = 0))
+            #.pipe(split, conditions = data["threshold.area"]!=0))
             #.pipe(split, conditions = data["threshold.area"]!=0)
 
 data = [data]
@@ -272,7 +273,39 @@ y_test = list(np.zeros(ages))
 # a = a[:-1]
 # =============================================================================
 
-sampsize = 100
+# =============================================================================
+# feat_df = pd.DataFrame(np.zeros(36).reshape(1,36))
+# feat_df.columns = X[0].columns
+# '''['temporal.autocorr',
+#   'temporal.min',
+#   'region.extent',
+#   'region.majaxis',
+#   'region.majmin.ratio',
+#   "region.minaxis",
+#   "mass.region",
+#   "threshold.area",
+#   "mass.total",
+#   "freq.rangesz", 
+#   "freq.maxsnr.freq", 
+#   "freq.avgsnr",
+#   "temporal.max",
+#   "spatial.min",
+#   "age"]'''
+# for i in range(200):
+#     sel = SelectFromModel(RandomForestClassifier(n_estimators = 18, max_features = 5))
+#     X_train, X_test, y_train, y_test = test_train_split(X[0][feat_df.columns],y[0], 10, 0.3)
+#     sel.fit(X_train, y_train)
+#     selected_feat = X_train.columns[(sel.get_support())]
+#     print(i)
+#     for j in selected_feat:
+#         feat_df[j] = feat_df[j] + 1
+# vals = np.concatenate((np.array(feat_df.columns).reshape(36,1), np.array(feat_df.values).reshape(36,1)), axis = -1)
+# dfret = pd.DataFrame(vals, columns = ["Feature", "Count"])
+# dfret =  dfret.sort_values(by = ["Count"], ascending = False, ignore_index = True)
+# print(dfret)
+# =============================================================================
+
+sampsize = 1
 lst = list(np.zeros(ages))
 for t in range(ages):
     lst[t] = list(np.zeros(sampsize))
@@ -285,7 +318,9 @@ _params = pd.DataFrame(list(range(1,(ages+1))), columns = ["Age"])
 _params["params"] = lst
 
 
-imp_features = ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+imp_features = ['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
+
+#['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
 '''['temporal.autocorr',
  'temporal.min',
  'region.extent',
@@ -297,7 +332,9 @@ imp_features = ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.maj
  "mass.total",
  "freq.rangesz", 
  "freq.maxsnr.freq", 
- "freq.avgsnr", "temporal.max", "age"]'''
+ "freq.avgsnr", 
+ "spatial.min",
+ "temporal.max"]'''
 #['temporal.autocorr', 'region.extent', 'mass.total', 'freq.rangesz', 'freq.avgsnr', 'age', 'mass.region']#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age']#['temporal.autocorr', 'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
 
 #["region.minaxis", "region.majaxis", "mass.total", "threshold.area", "mass.region", "spatial.min", "freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "temporal.max", "age"] #['region.majaxis', 'threshold.area', 'mass.region', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
@@ -372,11 +409,13 @@ for i in range(ages):
                     scores["Recall"][h] = recall_score(y_test, y_pred)
                     print(i,h, sep = " ")
                 
+                    
+                
             scrdata = {"Accuracy":scores["Accuracy"], "Precision":scores["Precision"], "Recall":scores["Recall"]}
             fig1, ax1 = plt.subplots()
             ax1.boxplot(scrdata.values())
             ax1.set_xticklabels(scrdata.keys())
-            plt.title(str(i)+" "+str(q))
+            plt.title("Age(s):"+" "+str(float(min(np.unique(X[0]["age"]))))+" "+str(float(max(np.unique(X[0]["age"])))))
             plt.ylim(0.90,1.0)
             
             
@@ -394,22 +433,25 @@ for i in range(ages):
 # _params["params"] = lst
 # 
 # 
-# imp_features = ['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age', "region.majaxis", "mass.region", "temporal.max"]
-# '''['temporal.autocorr',
-#  'temporal.min',
-#  'region.extent',
-#  'region.majaxis',
-#  'region.majmin.ratio',
-#  "region.minaxis",
-#  "mass.region",
-#  "threshold.area",
-#  "mass.total",
-#  "freq.rangesz", 
-#  "freq.maxsnr.freq", 
-#  "freq.avgsnr", "temporal.max", "age"]'''
+# imp_features = ['temporal.autocorr',
+#   'temporal.min',
+#   'region.extent',
+#   'region.majaxis',
+#   'region.majmin.ratio',
+#   "region.minaxis",
+#   "mass.region",
+#   "threshold.area",
+#   "mass.total",
+#   "freq.rangesz", 
+#   "freq.maxsnr.freq", 
+#   "freq.avgsnr",
+#   "temporal.max",
+#   "spatial.min",
+#   "age"]#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age', "region.majaxis", "mass.region", "temporal.max"]
+# 
 # #['freq.range.low', 'region.majaxis', 'region.majmin.ratio', 'temporal.autocorr', 'temporal.min', 'region.minaxis', 'mass.total', 'spatial.min', 'freq.avgsnr', 'temporal.max']
 # 
-#  #["region.minaxis", "region.majaxis", "mass.total", "threshold.area", "mass.region", "spatial.min", "freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "temporal.max", "age"]
+#   #["region.minaxis", "region.majaxis", "mass.total", "threshold.area", "mass.region", "spatial.min", "freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "temporal.max", "age"]
 # 
 # for i in range(ages):
 #         new_features = list(imp_features)
@@ -507,7 +549,7 @@ for i in range(ages):
 #                 plt.title(str(i)+" "+str(q))'''
 #             performance = [round(num, ndigits = 5) for num in performance]
 #             print(performance)
-#             if performance.index(max(performance))<len(new_features):
+#             if performance.index(max(performance))<len(new_features) and len(new_features)>5:
 #                 new_features.remove(new_features[performance.index(max(performance))])
 #             else:
 #                 new_features = new_features
@@ -654,8 +696,202 @@ plt.xlim(0,600)
 plt.ylim(0,800)'''
 
 
-#['temporal.autocorr', 'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'age']
-#['temporal.autocorr', 'region.extent', 'region.minaxis', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'age']
-#['temporal.autocorr', 'region.extent', 'mass.total', 'freq.rangesz', 'freq.avgsnr', 'age', 'mass.region']
+# =============================================================================
+# Age 1: ['temporal.autocorr', 'temporal.min', 'region.minaxis', 'mass.region', 'freq.rangesz']
+#        ['region.minaxis', 'threshold.area', 'mass.region','freq.rangesz', 'spatial.min', 'region.majaxis']
+# Final: ['temporal.min','temporal.autocorr','region.extent','region.majaxis','region.majmin.ratio',"region.minaxis","mass.region","threshold.area","mass.total","freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "spatial.min","temporal.max"]
+
+# Age 2: ['temporal.autocorr', 'temporal.min', 'region.extent', 'region.majaxis', 'mass.region', 'threshold.area', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'spatial.min']
+#        ['region.minaxis', 'mass.region', 'region.majaxis','region.majmin.ratio', 'threshold.area', 'spatial.min','region.extent']
+# Final: ['freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr','temporal.autocorr', 'temporal.min', 'temporal.max', 'mass.region', 'region.majaxis', 'region.minaxis', 'threshold.area', 'spatial.min','region.extent']
+
+# Age 3: ['temporal.autocorr', 'temporal.min', 'region.extent', 'region.majaxis', 'region.majmin.ratio', 'mass.region', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+#        ['region.minaxis', 'mass.region', 'threshold.area','region.majaxis', 'region.majmin.ratio', 'temporal.autocorr','spatial.min']
+# Final: ['mass.region', 'region.majaxis', 'region.minaxis','threshold.area', 'temporal.autocorr','spatial.min', 'temporal.min', 'region.extent','temporal.max', 'freq.maxsnr.freq']
+
+# Age 4: ['region.extent', 'mass.total', 'freq.maxsnr.freq', 'temporal.max']
+#        ['region.minaxis', 'mass.region', 'region.majmin.ratio','threshold.area', 'region.majaxis', 'region.extent']
+# Final: ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
+# Age 5: ['temporal.min', 'region.minaxis', 'mass.region', 'threshold.area', 'mass.total', 'freq.rangesz']
+#        ['region.minaxis', 'freq.rangesz', 'region.majmin.ratio','region.extent', 'temporal.max', 'mass.region', 'threshold.area','spatial.min']
+# Final: ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
+# Age 6: ['region.extent', 'region.minaxis', 'threshold.area', 'freq.maxsnr.freq', 'temporal.max']
+#        ['region.majmin.ratio', 'region.minaxis', 'mass.region','threshold.area', 'region.extent']
+# Final: ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
+# Age 7: ['temporal.autocorr', 'temporal.min', 'region.extent', 'region.majaxis', 'region.majmin.ratio', 'region.minaxis', 'mass.region', 'threshold.area', 'mass.total', 'freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max', 'spatial.min']
+#        ['region.majmin.ratio', 'region.minaxis', 'mass.region','region.majaxis', 'threshold.area', 'region.extent','freq.rangesz']
+# Final: ['temporal.autocorr','temporal.min', 'region.extent', 'region.majmin.ratio', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.rangesz', 'temporal.max', 'spatial.min', 'mass.total']
+
+# Age 8: ['region.extent', 'region.majaxis', 'mass.region', 'freq.rangesz', 'temporal.max']
+#        ['region.minaxis', 'threshold.area', 'mass.region','region.majmin.ratio', 'freq.rangesz', 'region.majaxis','temporal.autocorr']
+# Final: ['region.minaxis', 'threshold.area', 'mass.region','region.majmin.ratio', 'freq.rangesz', 'region.majaxis','temporal.autocorr', 'temporal.max']
+
+# Age 9: ['temporal.autocorr', 'temporal.min', 'region.extent', 'region.majaxis', 'region.majmin.ratio', 'mass.total', 'freq.rangesz', 'freq.avgsnr', 'spatial.min']
+#        ['region.minaxis', 'threshold.area', 'spatial.min','region.extent', 'region.majmin.ratio', 'region.majaxis','mass.region', 'freq.rangesz', 'temporal.autocorr']
+# Final: ['temporal.autocorr',"freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'temporal.max']
+
+# Age 10: ['region.majmin.ratio', 'mass.total', 'freq.rangesz', 'temporal.max', 'spatial.min']
+#         ['region.minaxis', 'threshold.area', 'mass.region','freq.rangesz', 'region.majaxis', 'region.majmin.ratio','spatial.min']
+# Final:  ['temporal.autocorr','temporal.min','region.extent','region.majaxis','region.majmin.ratio','region.minaxis','mass.region','threshold.area','freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr']
+
+# Age 11: ['temporal.autocorr', 'temporal.min', 'region.minaxis', 'threshold.area', 'freq.rangesz']
+#         ['region.minaxis', 'mass.region', 'threshold.area','region.majaxis', 'freq.rangesz', 'spatial.min']
+# Final:  ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+
+# Age 12: ['temporal.autocorr', 'temporal.min', 'region.majmin.ratio', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.rangesz', 'temporal.max', 'spatial.min']
+#         ['spatial.min', 'region.minaxis', 'freq.rangesz','temporal.autocorr', 'threshold.area', 'region.majaxis','mass.region', 'region.majmin.ratio', 'region.extent']
+# Final:  ['spatial.min', 'region.minaxis', 'freq.rangesz','temporal.autocorr', 'threshold.area', 'region.majaxis','mass.region', 'region.majmin.ratio', 'region.extent', 'temporal.max', 'temporal.min']
+
+# Age 13: ['temporal.autocorr', 'region.extent', 'region.majmin.ratio', 'freq.maxsnr.freq', 'spatial.min']
+#         ['region.minaxis', 'threshold.area', 'spatial.min', 'mass.region','region.majaxis', 'freq.rangesz']
+# Final:  ['temporal.autocorr', 'region.extent', 'region.majmin.ratio', 'freq.maxsnr.freq', 'region.minaxis', 'threshold.area', 'spatial.min', 'mass.region','region.majaxis', 'freq.rangesz']
+
+# Age 14: ['temporal.min', 'region.extent', 'region.majmin.ratio', 'mass.region', 'threshold.area', 'mass.total', 'freq.avgsnr']
+#         ['region.minaxis', 'mass.region', 'threshold.area', 'spatial.min','region.extent', 'region.majaxis', 'freq.maxsnr.freq','temporal.max']
+# Final:  ['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']
+# =============================================================================
+
+# =============================================================================
+#                 Feature Count
+# 17       region.minaxis   100
+# 16  region.majmin.ratio   100
+# 13  region.eccentricity    99
+# 9           mass.region    93
+# 15       region.majaxis    92
+# 8             mass.perc    92
+# 33       threshold.area    91
+# 14        region.extent    84
+# 6          freq.rangesz    75
+# 7                length    56
+# 25          spatial.min    43
+# 24          spatial.max    33
+# 4       freq.range.high    29
+# 10           mass.total    27
+# 11    region.centroid.0    20
+# 29         temporal.max    17
+# 5        freq.range.low     9
+# 19     spatial.COMall.x     7
+# 34       threshold.perc     6
+# 1        freq.integrate     6
+# 28    temporal.autocorr     5
+# 32         temporal.std     4
+# 26    spatial.n.domains     1
+# 3      freq.maxsnr.freq     1
+# 31      temporal.n.freq     0
+# 21     spatial.COMdom.x     0
+# 30         temporal.min     0
+# 27          spatial.std     0
+# 23          spatial.avg     0
+# 22     spatial.COMdom.y     0
+# 12    region.centroid.1     0
+# 20     spatial.COMall.y     0
+# 18        region.orient     0
+# 35                  age     0
+# 2           freq.maxsnr     0
+# 0           freq.avgsnr     0
+# 
+# =============================================================================
+
+age_features = [['temporal.min','temporal.autocorr','region.extent','region.majaxis','region.majmin.ratio',"region.minaxis","mass.region","threshold.area","mass.total","freq.rangesz", "freq.maxsnr.freq", "freq.avgsnr", "spatial.min","temporal.max"],
+                ['freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr','temporal.autocorr', 'temporal.min', 'temporal.max', 'mass.region', 'region.majaxis', 'region.minaxis', 'threshold.area', 'spatial.min','region.extent'],
+                ['mass.region', 'region.majaxis', 'region.minaxis','threshold.area', 'temporal.autocorr','spatial.min', 'temporal.min', 'region.extent','temporal.max', 'freq.maxsnr.freq'],
+                ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max'],
+                ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max'],
+                ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max'],
+                ['temporal.autocorr','temporal.min', 'region.extent', 'region.majmin.ratio', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.rangesz', 'temporal.max', 'spatial.min', 'mass.total'],
+                ['region.minaxis', 'threshold.area', 'mass.region','region.majmin.ratio', 'freq.rangesz', 'region.majaxis','temporal.autocorr', 'temporal.max'],
+                ['temporal.autocorr',"freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'temporal.max'],
+                ['temporal.autocorr','temporal.min','region.extent','region.majaxis','region.majmin.ratio','region.minaxis','mass.region','threshold.area','freq.rangesz', 'freq.maxsnr.freq', 'freq.avgsnr'],
+                ['temporal.autocorr', "freq.rangesz",'region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max'],
+                ['spatial.min', 'region.minaxis', 'freq.rangesz','temporal.autocorr', 'threshold.area', 'region.majaxis','mass.region', 'region.majmin.ratio', 'region.extent', 'temporal.max', 'temporal.min'],
+                ['temporal.autocorr', 'region.extent', 'region.majmin.ratio', 'freq.maxsnr.freq', 'region.minaxis', 'threshold.area', 'spatial.min', 'mass.region','region.majaxis', 'freq.rangesz'],
+                ['temporal.autocorr', 'freq.rangesz','region.extent', 'region.majaxis', 'region.minaxis', 'mass.region', 'threshold.area', 'freq.maxsnr.freq', 'freq.avgsnr', 'temporal.max']]
+
+features_tally = pd.DataFrame(np.zeros((36,14)), columns = sp.arange(1,15), index = X[0].columns)
+q = 1
+for i in age_features:
+    for j in i:
+        features_tally[q][j]+=1
+    q+=1
+
+features_tally["Sorter"] = np.zeros(36)
+for i in range(len(features_tally)):
+    features_tally["Sorter"][i] = sum(features_tally.iloc[i,:])
+
+features_tally = features_tally.sort_values(by = ["Sorter"], ascending = False)
+features_tally_0 = features_tally.iloc[:14,:14]
+features_tally_1 = pd.DataFrame(features_tally_0)
+perf_df = pd.DataFrame(np.zeros((3,14)), columns = features_tally_0.columns, index = ["Accuracy", "Precision", "Recall"])
+features_tally_1 = features_tally_1.append(perf_df)
+
+for i in range(len(features_tally_1.columns)):
+    dt = X[0][X[0]["age"]==i+1][age_features[i]]
+    yt = y[0][dt.index]
+    rnf = RandomForestClassifier(n_estimators = 18, max_features = 5, class_weight = {0:1,1:1})
+    for j in range(10):
+        print(i,j)
+        X_train, X_test, y_train, y_test = test_train_split(dt,yt, 10, 0.3)
+        rnf.fit(X_train, y_train)
+        y_pred = rnf.predict(X_test)
+        features_tally_1.iloc[14,i] += accuracy_score(y_test, y_pred)
+        features_tally_1.iloc[15,i] += precision_score(y_test, y_pred)
+        features_tally_1.iloc[16,i] += recall_score(y_test, y_pred)
+        total = len(y_test) 
+        one_count = np.sum(y_test)
+        zero_count = total - one_count 
+        lm = [y for _, y in sorted(zip(y_pred, y_test), reverse = True)] 
+        xc = np.arange(0, total + 1) 
+        yc = np.append([0], np.cumsum(lm)) 
+        plt.figure(i)
+        plt.plot(xc, yc, c = 'b', label = 'Random classifier', linewidth = 2)
+        plt.plot([0, one_count, total], [0, one_count, one_count], c = 'grey', linewidth = 2, alpha = 0.5, linestyle = "dashed")
+    features_tally_1.iloc[14:17,i] = features_tally_1.iloc[14:17,i]/100
+
+
+'''def sawtooth(x, slope, period, buffer):
+    if x//period != x/period:
+        if x>=period*(x//period)+buffer:
+            res = slope*(x-(period*(x//period)))
+        else:
+            res = slope*period-(slope*period/buffer)*(x-(period*(x//period)))
+    else:
+        res = slope*period
+    return res
+
+a = [sawtooth(t, 4/35, 35, 1) for t in range(100)]
+b = [2*np.sin(0.7*r) for r in range(100)]
+
+plt.figure(1)
+plt.plot(sp.arange(0,100), a, c = 'blue')
+plt.plot(sp.arange(0,100), np.array(b)-2, c = 'orange')
+
+plt.figure(2)
+plt.plot(sp.arange(0,100), (-0.8*(np.array(a)-2) + 0.2*np.array(b))+2, c = 'brown')
+plt.plot(sp.arange(0,100), (0.45*(np.array(a)-2) + -0.55*np.array(b))-2, c = 'maroon')
+plt.ylim(-4,4)
+
+plt.figure(1)
+plt.plot(sp.arange(0,100), (-0.97*(np.array(a)-2) + 0.03*np.array(b))+2, c = 'blue', alpha = 0.5)
+plt.plot(sp.arange(0,100), (0.023*(np.array(a)-2) + 0.977*np.array(b))-2, c = 'orange', alpha = 0.5)
+plt.ylim(-4,4)
+'''
+
+
+# =============================================================================
+# plt.figure(0)
+# plt.plot(sp.arange(1,15), features_tally_1.iloc[14,:], c = 'red')
+# plt.plot(sp.arange(1,15), features_tally_1.iloc[15,:], c = 'blue')
+# plt.plot(sp.arange(1,15), features_tally_1.iloc[16,:], c = 'green')
+# plt.plot(sp.arange(1,15), np.mean(features_tally_1.iloc[14:17,:]), c = 'black', alpha = 0.8, linestyle = "dashed")
+# plt.legend(["Accuracy", "Precision", "Recall", "Avg"])
+# plt.xlabel("Age")
+# plt.ylabel("Performance")
+# plt.xlim(1,14)
+# plt.ylim(0.9,1)
+# =============================================================================
+
 
 
