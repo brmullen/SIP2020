@@ -28,6 +28,7 @@
 **Remember**: We probably won't show all the data/things we try, since we have limited amount of time. We need to create a good representation even if its not everything.
 
 __Next practice presentation__: **Friday August 7, 2020 at 3PM**
+    
     - Desi
     - Sydney
 
