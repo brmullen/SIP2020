@@ -12,11 +12,11 @@
     Use randomForest for classification
 
 - [ ] Needed plots 
-    - [ ] Plot the two features from no-domain data to see how they separate
-    - [ ] Plot metrics on top of t-SNE plot domain plot (including age and animal number)
-    - [ ] Create plot to show the extent of the data we showing (how many eigenvectors, how many ages?)
-    - [ ] Implement contours intstead of a bunch of scatter plots? (Use 2dhistogram and then countours)
-    - [ ] Combine the no-domain and domain accuracy plots together (overall accuracy)
+    - [ ] Plot the two features from no-domain data to see how they separate (Saathvik)
+    - [ ] Plot metrics on top of t-SNE plot domain plot (including age and animal number; Saathvik)
+    - [ ] Create plot to show the extent of the data we showing (how many eigenvectors, how many ages?; Anna)
+    - [ ] Implement contours intstead of a bunch of scatter plots? (Use 2dhistogram and then countours, Giovanni)
+    - [ ] Combine the no-domain and domain accuracy plots together (overall accuracy; Saathvik)
 
 - [ ] New Data
     - [ ] Get new data for analysis, run through our model (Brian)
@@ -32,17 +32,17 @@ __Next practice presentation__: **Friday August 7, 2020 at 3PM**
     - Desi
     - Sydney
 
-- [ ] Create and manage a script for the presentation/manage the organization of the slides.
+- [ ] Create and manage a script for the presentation/manage the organization of the slides (Anna).
     - [ ] Add informative slide titles.
     - [ ] Periodically make the slides connect to the bigger picture.
     - [ ] Make sure all plots have axis, labels, colorbars, legends, etc.
-- [ ] Make an eigenvector slide that describes how metrics were measured.
+- [ ] Make an eigenvector slide that describes how metrics were measured (Giovanni).
     - [ ] Spend a lot of time developing the spatial and temporal features.
     - [ ] Fourier analysis description.
-- [ ] Add human classification of artifacts vs signal 
+- [ ] Add human classification of artifacts vs signal (Saathvik)
     - [ ] show confussion matrix?
     - [ ] Make it more prominant/this is our anchor
-- [ ] Add domain vs no-domain description (if we keep the sepparate).  We can combine the results into the same graph.
+
 
 __FINAL PRESENTATION__: **Saturday August 15, 2020**
 
