@@ -2,64 +2,49 @@
 
 ## TODO list
 
+### Analysis/Exploration/Visualization
+
 - [x] Find ways of displaying data categories (pairplots and histograms)
 - [x] Run any machine learning classifier (use the code from the jupyter notebook and the pyWholeBrainClassify.py)
 - [x] Investigate based on different age groups:
-
-__BEST FEATURES BY AGE GROUP__
-
-Saathvik (Age group: P1-P5):
-
-    1. region.minaxis
-    2. freq.rangesz
-    3. mass.region/mass.perc
-    4. threshold.area
-    5. mass.total
-    6. region.majaxis
-    7. freq.maxsnr.freq
-    8. freq.avgsnr
-
-Anna (Age group: P6-10):
-
-    1. region.majaxis
-    2. region.minaxis
-    3. spatial.min
-    4. temporal.max
-    5. temporal.min
-
-Giovanni (Age group 11-14):
-
-    1. freq.integrate
-    2. freq.rangesz
-    3. mass.region/mass.perc
-    4. region.minaxis
-    5. threshold.area
-
-
-Features that don't have any meaningful relavance:
-
-    1. length (this is the length of values that define the freq.rangesz, which their values are not evenly spaced)
-    2. spatial.avg (these eigenvectors are zero centered to begin with, there are only slight variations from zero, most likely noise)
-    3. temporal.avg (see spatial.avg)
-
-Current list that we will use to compare models (3 regoin, 3 spatial, 3 freq, 1 temporal; July 16,2020):
-
-    1. region.minaxis
-    2. region.majaxis
-    3. threshold.area
-    4. mass.total
-    5. mass.region/mass.perc
-    6. spatial.min
-    7. freq.rangesz
-    8. freq.maxsnr.freq
-    9. freq.avgsnr
-    10. temporal.max
-    11. age (not scaled?/scaled?)
-
-
-- [ ] Compare between domain vs no-domain (x2 per other comparison)
-- [ ] Compare each age group to all the data together (total of 8 ML algorithms)
+- [x] Compare between domain vs no-domain (x2 per other comparison)
+- [x] Compare each age group to all the data together (total of 8 ML algorithms)
     Use randomForest for classification
+
+- [ ] Needed plots 
+    - [ ] Plot the two features from no-domain data to see how they separate
+    - [ ] Plot metrics on top of t-SNE plot domain plot (including age and animal number)
+    - [ ] Create plot to show the extent of the data we showing (how many eigenvectors, how many ages?)
+    - [ ] Implement contours intstead of a bunch of scatter plots? (Use 2dhistogram and then countours)
+    - [ ] Combine the no-domain and domain accuracy plots together (overall accuracy)
+
+- [ ] New Data
+    - [ ] Get new data for analysis, run through our model (Brian)
+    - [ ] Run new data through model, compare to how the new data performs on the data
+
+
+### Presentation
+
+**Remember**: We probably won't show all the data/things we try, since we have limited amount of time. We need to create a good representation even if its not everything.
+
+__Next practice presentation__: **Friday August 7, 2020 at 3PM**
+    - Desi
+    - Sydney
+
+- [ ] Create and manage a script for the presentation/manage the organization of the slides.
+    - [ ] Add informative slide titles.
+    - [ ] Periodically make the slides connect to the bigger picture.
+    - [ ] Make sure all plots have axis, labels, colorbars, legends, etc.
+- [ ] Make an eigenvector slide that describes how metrics were measured.
+    - [ ] Spend a lot of time developing the spatial and temporal features.
+    - [ ] Fourier analysis description.
+- [ ] Add human classification of artifacts vs signal 
+    - [ ] show confussion matrix?
+    - [ ] Make it more prominant/this is our anchor
+- [ ] Add domain vs no-domain description (if we keep the sepparate).  We can combine the results into the same graph.
+
+__FINAL PRESENTATION__: **Saturday August 15, 2020**
+
 
 ==================================================================
 
